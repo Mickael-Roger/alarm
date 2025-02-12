@@ -191,8 +191,9 @@ func getPendingAlarms(tmux bool) {
 		}
 		if count == 0 {
 		        fmt.Printf("🔔: None ")
+		} else{
+			fmt.Printf("#[bg=red]🔔: %d alerts: %s #[bg=default]", count, strings.Join(labels, ", "))
 		}
-		fmt.Printf("#[bg=red]🔔: %d alerts: %s #[bg=default]", count, strings.Join(labels, ", "))
 	} else {
 		// Affichage classique
 		for rows.Next() {
