@@ -172,7 +172,7 @@ func getPendingAlarms() {
 		var timeStr string
 		rows.Scan(&alarm.ID, &alarm.Label, &timeStr)
 		alarm.Time, _ = time.Parse(time.RFC3339, timeStr)
-		fmt.Printf("ID: %d, Time: %s, Label: %s\n", alarm.ID, alarm.Time, alarm.Label)
+		fmt.Printf("%d %s: %s\n", alarm.ID, alarm.Time, alarm.Label)
 	}
 }
 
