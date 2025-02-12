@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"path/filepath"
 	"os"
 	"strconv"
 	"time"
@@ -19,7 +20,17 @@ type Alarm struct {
 	Acknowledged bool
 }
 
-const dbFile = "alarms.db"
+
+func getDBPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+		home = ""
+	}
+	return filepath.Join(home, ".alarms.db")
+}
+
+var dbFile string = getDBPath()
 
 func main() {
 	if len(os.Args) < 2 {
