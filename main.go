@@ -216,16 +216,32 @@ func acknowledgeAlarm(id int) {
 	}
 	defer db.Close()
 
-	res, err := db.Exec("UPDATE alarms SET acknowledged = 1 WHERE id = ?", id)
-	if err != nil {
-		log.Fatal(err)
+	if id == 0 {
+		now := time.Now().Format(time.RFC3339)
+		res, err := db.Exec("UPDATE alarms SET acknowledged = 1 WHERE acknowledged = 0 AND time <= ?", now)
+		if err != nil {
+			log.Fatal(err)
+		}
+	
+		n, _ := res.RowsAffected()
+		if n == 0 {
+			fmt.Println("Alarm not found.")
+		} else {
+			fmt.Println("Alarm acknowledged successfully!")
+		}
+	}else {
+		res, err := db.Exec("UPDATE alarms SET acknowledged = 1 WHERE id = ?", id)
+		if err != nil {
+			log.Fatal(err)
+		}
+	
+		n, _ := res.RowsAffected()
+		if n == 0 {
+			fmt.Println("Alarm not found.")
+		} else {
+			fmt.Println("Alarm acknowledged successfully!")
+		}
 	}
 
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		fmt.Println("Alarm not found.")
-	} else {
-		fmt.Println("Alarm acknowledged successfully!")
-	}
 }
 
