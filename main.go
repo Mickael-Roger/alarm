@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -19,7 +20,6 @@ type Alarm struct {
 	Time         time.Time
 	Acknowledged bool
 }
-
 
 func getDBPath() string {
 	home, err := os.UserHomeDir()
@@ -48,7 +48,12 @@ func main() {
 	case "create":
 		createAlarm()
 	case "get":
-		getPendingAlarms()
+		// Vérification de l'option '--tmux'
+		tmux := false
+		if len(os.Args) > 2 && os.Args[2] == "--tmux" {
+			tmux = true
+		}
+		getPendingAlarms(tmux)
 	case "ack":
 		if len(os.Args) < 3 {
 			fmt.Println("Usage: alarm ack <id>")
@@ -70,7 +75,7 @@ func printHelp() {
 	alarm help          - Show help
 	alarm list          - List all upcoming alarms
 	alarm create        - Create a new alarm
-	alarm get           - List non-acknowledged alarms due now
+	alarm get [--tmux]  - List non-acknowledged alarms due now
 	alarm ack <id>      - Acknowledge an alarm by ID`)
 }
 
@@ -86,7 +91,7 @@ func initDB() {
 		label TEXT,
 		time TEXT,
 		acknowledged BOOLEAN
-	)`) 
+	)`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -108,7 +113,10 @@ func listAlarms() {
 	for rows.Next() {
 		var alarm Alarm
 		var timeStr string
-		rows.Scan(&alarm.ID, &alarm.Label, &timeStr, &alarm.Acknowledged)
+		err := rows.Scan(&alarm.ID, &alarm.Label, &timeStr, &alarm.Acknowledged)
+		if err != nil {
+			log.Fatal(err)
+		}
 		alarm.Time, _ = time.Parse(time.RFC3339, timeStr)
 		fmt.Printf("ID: %d, Time: %s, Label: %s, Ack: %v\n", alarm.ID, alarm.Time, alarm.Label, alarm.Acknowledged)
 	}
@@ -153,7 +161,7 @@ func createAlarm() {
 	fmt.Println("Alarm created successfully!")
 }
 
-func getPendingAlarms() {
+func getPendingAlarms(tmux bool) {
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
 		log.Fatal(err)
@@ -167,12 +175,36 @@ func getPendingAlarms() {
 	}
 	defer rows.Close()
 
-	for rows.Next() {
-		var alarm Alarm
-		var timeStr string
-		rows.Scan(&alarm.ID, &alarm.Label, &timeStr)
-		alarm.Time, _ = time.Parse(time.RFC3339, timeStr)
-		fmt.Printf("%d %s: %s\n", alarm.ID, alarm.Time, alarm.Label)
+	if tmux {
+		// Récupération des libellés pour l'affichage en mode tmux
+		var labels []string
+		count := 0
+		for rows.Next() {
+			var alarm Alarm
+			var timeStr string
+			err := rows.Scan(&alarm.ID, &alarm.Label, &timeStr)
+			if err != nil {
+				log.Fatal(err)
+			}
+			labels = append(labels, alarm.Label)
+			count++
+		}
+		if count == 0 {
+		        fmt.Printf("🔔: None ")
+		}
+		fmt.Printf("#[bg=red]🔔: %d alerts: %s #[bg=default]", count, strings.Join(labels, ", "))
+	} else {
+		// Affichage classique
+		for rows.Next() {
+			var alarm Alarm
+			var timeStr string
+			err := rows.Scan(&alarm.ID, &alarm.Label, &timeStr)
+			if err != nil {
+				log.Fatal(err)
+			}
+			alarm.Time, _ = time.Parse(time.RFC3339, timeStr)
+			fmt.Printf("Id: %d, Date: %s: %s\n", alarm.ID, alarm.Time, alarm.Label)
+		}
 	}
 }
 
