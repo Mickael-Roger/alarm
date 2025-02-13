@@ -128,8 +128,14 @@ func createAlarm() {
 	}
 	label, _ := labelPrompt.Run()
 
+	// Obtenez la date actuelle
+	currentDate := time.Now().Format("2006-01-02")
+
+	// Préremplissez le champ de saisie de l'heure avec la date actuelle
 	timePrompt := promptui.Prompt{
-		Label: "Enter time (YYYY-MM-DD HH:MM) or minutes from now",
+		Label:    "Enter time (YYYY-MM-DD HH:MM) or minutes from now",
+		Default:  currentDate + " ",
+		Validate: validateTimeInput,
 	}
 	timeInput, err := timePrompt.Run()
 	if err != nil {
@@ -159,6 +165,20 @@ func createAlarm() {
 	}
 
 	fmt.Println("Alarm created successfully!")
+}
+
+func validateTimeInput(input string) error {
+	// Vérifiez si l'entrée est un nombre (minutes à partir de maintenant)
+	if _, err := strconv.Atoi(input); err == nil {
+		return nil
+	}
+
+	// Vérifiez si l'entrée est au format "YYYY-MM-DD HH:MM"
+	_, err := time.Parse("2006-01-02 15:04", input)
+	if err != nil {
+		return fmt.Errorf("invalid time format")
+	}
+	return nil
 }
 
 func getPendingAlarms(tmux bool) {
@@ -222,7 +242,7 @@ func acknowledgeAlarm(id int) {
 		if err != nil {
 			log.Fatal(err)
 		}
-	
+
 		n, _ := res.RowsAffected()
 		if n == 0 {
 			fmt.Println("Alarm not found.")
@@ -234,7 +254,7 @@ func acknowledgeAlarm(id int) {
 		if err != nil {
 			log.Fatal(err)
 		}
-	
+
 		n, _ := res.RowsAffected()
 		if n == 0 {
 			fmt.Println("Alarm not found.")
